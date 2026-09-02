@@ -20,6 +20,7 @@ const toProduct = (row: Row): Product => ({
     .map((item) => item.supplier as Row | undefined)
     .filter((supplier): supplier is Row => Boolean(supplier))
     .map((supplier) => ({ id: supplier.id as string, name: supplier.name as string })),
+  warehouses: [],
 });
 const toOrder = (row: Row): Order => ({
   id: row.id as string,
