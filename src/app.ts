@@ -8,7 +8,16 @@ import { orderRoutes } from './routes/orders.js';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
-  app.register(cors, { origin: env.WEB_ORIGIN });
+  app.register(cors, {
+    origin: (origin, callback) => {
+      if (!origin || env.WEB_ORIGIN.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
+  });
   app.get('/health', async () => ({ status: 'ok' }));
   app.register(productRoutes);
   app.register(domainRoutes);
