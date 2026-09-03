@@ -41,8 +41,31 @@ export function buildApp() {
       return reply
         .code(503)
         .send({ error: 'DATABASE_SCHEMA_NOT_READY', message: 'Database schema is not available' });
-    app.log.error(error);
-    return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    const databaseError = error as {
+      code?: string;
+      message?: string;
+      details?: string;
+      hint?: string;
+    };
+    app.log.error(
+      {
+        code: databaseError.code,
+        message: databaseError.message,
+        details: databaseError.details,
+        hint: databaseError.hint,
+      },
+      'Unhandled API error',
+    );
+    return reply.code(500).send({
+      error: 'INTERNAL_ERROR',
+      message:
+        process.env.NODE_ENV === 'production'
+          ? 'Internal server error'
+          : databaseError.message ?? 'Internal server error',
+      ...(process.env.NODE_ENV === 'production' || !databaseError.code
+        ? {}
+        : { code: databaseError.code }),
+    });
   });
   return app;
 }

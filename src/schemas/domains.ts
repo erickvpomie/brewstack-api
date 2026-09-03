@@ -11,9 +11,7 @@ export const categorySchema = z.object({
 });
 export const warehouseSchema = z.object({
   name: text.max(120),
-  code: text.max(40),
-  address: z.string().max(300).default(''),
-  active: z.boolean().default(true),
+  description: z.string().max(500).default(''),
 });
 export const supplierSchema = z.object({
   name: text.max(160),

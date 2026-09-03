@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { supabase } from '../lib/supabase.js';
 import type { Order, OrderItem, Product } from '../types.js';
 import type { OrderBody, OrderPatch } from '../schemas/order.js';
@@ -80,13 +81,13 @@ export async function createOrder(input: OrderBody) {
   const total = Math.round(items.reduce((sum, item) => sum + item.line_total, 0) * 100) / 100;
   const { data: order, error } = await supabase
     .from('orders')
-    .insert({ status: input.status, notes: input.notes, total })
+    .insert({ id: randomUUID(), status: input.status, notes: input.notes, total })
     .select('id')
     .single();
   if (error) throw error;
   const { error: itemError } = await supabase
     .from('order_items')
-    .insert(items.map((item) => ({ ...item, order_id: order.id })));
+    .insert(items.map((item) => ({ ...item, id: randomUUID(), order_id: order.id })));
   if (itemError) throw itemError;
   const result = await load(order.id);
   if (!result) throw new Error('Order could not be loaded');

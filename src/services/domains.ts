@@ -99,7 +99,9 @@ const toInventoryItem = (row: Record<string, unknown>) => {
           active: product.active,
         }
       : null,
-    warehouse: warehouse ? { id: warehouse.id, name: warehouse.name, code: warehouse.code } : null,
+    warehouse: warehouse
+      ? { id: warehouse.id, name: warehouse.name, description: warehouse.description }
+      : null,
   };
 };
 export const createInventory = async (input: {
