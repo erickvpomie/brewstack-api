@@ -5,6 +5,7 @@ import { env } from './lib/env.js';
 import { productRoutes } from './routes/products.js';
 import { domainRoutes } from './routes/domains.js';
 import { orderRoutes } from './routes/orders.js';
+import { unitRoutes } from './routes/units.js';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -22,6 +23,7 @@ export function buildApp() {
   app.register(productRoutes);
   app.register(domainRoutes);
   app.register(orderRoutes);
+  app.register(unitRoutes);
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError)
       return reply

@@ -93,12 +93,81 @@ export async function createOrder(input: OrderBody) {
   return result;
 }
 export async function updateOrder(id: string, input: OrderPatch) {
+  if (input.items) {
+    const ids = input.items.map((item) => item.productId);
+    const { data: products, error: productError } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', ids);
+    if (productError) throw productError;
+    const productMap = new Map((products as Row[]).map((product) => [product.id as string, product]));
+    if (productMap.size !== new Set(ids).size)
+      throw Object.assign(new Error('One or more products were not found'), {
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    const items = input.items.map((item) => {
+      const product = productMap.get(item.productId) as Row;
+      const unitCost = Number(product.cost);
+      return {
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_cost: unitCost,
+        line_total: Math.round(unitCost * item.quantity * 100) / 100,
+      };
+    });
+    const total = Math.round(items.reduce((sum, item) => sum + item.line_total, 0) * 100) / 100;
+    const { error: removeItemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', id);
+    if (removeItemsError) throw removeItemsError;
+    const { error: itemError } = await supabase
+      .from('order_items')
+      .insert(items.map((item) => ({ ...item, order_id: id })));
+    if (itemError) throw itemError;
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        total,
+      })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    return data ? load(id) : null;
+  }
+
+  const { items: _items, ...orderFields } = input;
   const { data, error } = await supabase
     .from('orders')
-    .update(input)
+    .update(orderFields)
     .eq('id', id)
     .select('id')
     .maybeSingle();
   if (error) throw error;
   return data ? load(id) : null;
+}
+
+export async function deleteOrder(id: string) {
+  const { data: existing, error: lookupError } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!existing) return false;
+
+  // Remove the dependent rows explicitly so deletion also works when the
+  // production database was created before the cascade constraint existed.
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .delete()
+    .eq('order_id', id);
+  if (itemsError) throw itemsError;
+
+  const { error: deleteError } = await supabase.from('orders').delete().eq('id', id);
+  if (deleteError) throw deleteError;
+  return true;
 }

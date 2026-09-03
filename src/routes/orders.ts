@@ -29,4 +29,10 @@ export async function orderRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'ORDER_NOT_FOUND', message: 'Order not found' });
     return order;
   });
+  app.delete('/api/orders/:id', async (request, reply) => {
+    const deleted = await orders.deleteOrder(orderIdSchema.parse(request.params).id);
+    if (!deleted)
+      return reply.code(404).send({ error: 'ORDER_NOT_FOUND', message: 'Order not found' });
+    return reply.code(204).send();
+  });
 }

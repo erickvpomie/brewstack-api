@@ -21,9 +21,20 @@ export const orderBodySchema = z
       });
   });
 export const orderPatchSchema = z
-  .object({ status: orderStatus.optional(), notes: z.string().max(2000).optional() })
-  .refine((value) => value.status !== undefined || value.notes !== undefined, {
-    message: 'At least one field is required',
+  .object({
+    status: orderStatus.optional(),
+    notes: z.string().max(2000).optional(),
+    items: z.array(orderItem).min(1).max(200).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === undefined && value.notes === undefined && value.items === undefined)
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one field is required' });
+    if (value.items && new Set(value.items.map((item) => item.productId)).size !== value.items.length)
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'Products must not be repeated',
+      });
   });
 export const orderQuerySchema = z.object({ status: orderStatus.optional() });
 export type OrderBody = z.infer<typeof orderBodySchema>;
